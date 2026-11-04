@@ -1,5 +1,4 @@
 # microgit-cli
-
 `microgit` - **your own git server - clone, push, host**.
 
 A small command line client for the [microgit-server](https://www.npmjs.com/package/microgit-server) server. It keeps the API
@@ -13,15 +12,14 @@ usual `git` commands so push/pull work with the account credentials.
 npm install -g microgit-cli
 ```
 
-
 ## Interactive shell
 
-Run `microgit` with no arguments (or `microgit shell`) to open the shell:
+Run `microgit` with no arguments (or `$ microgit shell`) to open the shell:
 
 ```
-  ● ━━━ ●
-    ┣━━━ ●   microgit-cli • gitserver  v0.1.0
-    ┗━━━ ●   your own git server — clone, push, host
+ μgit ━━━━ ●
+      ┣━━━ ●   microgit-cli • gitserver  v0.1.0
+      ┗━━━ ●   your own git server — clone, push, host
 
   # server   http://{HOST_NAME}:{PORT}
   # account  alice · 7d left
@@ -186,14 +184,6 @@ Default location: `~/.microgit/config.json`. Use `MICROGIT_CONFIG` to point at a
 different file, for example one per server:
 
 ```bash
-MICROGIT_CONFIG=~/.microgit/work.json microgit login --url https://git.example.com
-```
-
-The shell keeps its history next to it, in `~/.microgit/history`.
-
-Show it with:
-
-```bash
 microgit config
 microgit config set url https://git.example.com
 microgit config set username alice
@@ -202,22 +192,6 @@ microgit config clear
 microgit config edit              # open config.json in $EDITOR / notepad
 ```
 
-Environment variables override the file for one command:
-
-| Variable | Meaning |
-| --- | --- |
-| `MICROGIT_URL` | Server URL |
-| `MICROGIT_TOKEN` | API token, instead of the stored one |
-| `MICROGIT_USERNAME` | Account name, also used for git |
-| `MICROGIT_PASSWORD` | Git password, also used for git |
-| `MICROGIT_CONFIG` | Config file path |
-| `NO_COLOR` | Disable colours |
-
-## Renaming the CLI
-
-Package name, command name, banner, tagline, label, version, environment prefix
-and config folder all live in [`src/settings.ts`](src/settings.ts). Change them
-there and update `name` / `bin` in `package.json` to match.
 
 ## Domains
 
@@ -226,28 +200,3 @@ The server's `domain` / `publicUrl` setting changes the clone URL it returns.
 from the machine running the CLI. If the public domain is only reachable from
 outside, log in with the internal URL instead; the repository still works, but a
 `domain` configured on the server wins when it builds the clone URL.
-
-## Exit codes
-
-- `0` success
-- `1` expected failure (bad input, server error, git failure)
-
-Errors are printed once without a stack trace. `--json` output is still the
-server's JSON (or, for `whoami`/`config`, a small object with the same fields).
-
-## Troubleshooting
-
-- **`You are not signed in`** — run `microgit login`; the token expires after the
-  server's `sessionDays`.
-- **`login` keeps signing in as the old account** — the stored session is still
-  valid; pass `--force` or run `microgit logout` first.
-- **`Authentication failed` on push** — `login --save-password`, or set
-  `MICROGIT_PASSWORD`; the username/password is your account, not the API token.
-- **`No 'origin' remote`** — use `microgit clone <owner/name>` or add a remote
-  with git.
-- **`Directory is not empty`** — `--clone`/`--init` refuse to overwrite files;
-  choose another `--dir`.
-- **`Already a git repository`** — `microgit init` skips folders that already
-  have `.git`.
-- **Server unreachable** — pass `--url` or set `MICROGIT_URL`; check the server's
-  `host`, `port` and reverse proxy.
