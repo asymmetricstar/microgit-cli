@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { clearStoredConfig, configFilePath, loadConfig, normalizeUrl, readStoredConfig, writeStoredConfig, } from '../config/index.js';
 import { BIN } from '../config/settings.js';
 import { fail, formatDate, info, ok, printJson } from '../ui/index.js';
@@ -16,6 +17,20 @@ export async function configCommand(argv) {
     }
     if (action === 'path') {
         console.log(configFilePath());
+        return;
+    }
+    if (action === 'edit') {
+        const file = configFilePath();
+        // Make sure the file exists.
+        if (!fs.existsSync(file))
+            writeStoredConfig(readStoredConfig());
+        const editor = process.env.EDITOR || process.env.VISUAL || (process.platform === 'win32' ? 'notepad' : 'vi');
+        const { spawnSync } = await import('node:child_process');
+        const result = spawnSync(editor, [file], { stdio: 'inherit', shell: true });
+        if (result.status !== 0) {
+            fail(`Editor exited with code ${result.status ?? 'unknown'}.`);
+        }
+        ok(`Edited ${file}.`);
         return;
     }
     if (action === 'clear') {

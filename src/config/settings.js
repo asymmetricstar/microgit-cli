@@ -16,7 +16,7 @@ export const SETTINGS = {
     name: 'microgit-cli',
     /** Wordmark at the start of the ASCII logo: `μgit ━━━ ●`. */
     mark: 'μgit',
-    version: '0.1.0',
+    version: '0.1.6',
     /** Short label printed next to the name: `microgit-cli • <label>`. */
     label: 'git client',
     tagline: 'manage your own git server — clone, push, host',

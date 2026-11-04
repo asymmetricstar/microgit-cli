@@ -6,6 +6,7 @@ import { ask, askSecret, bold, cyan, dim, fail, faint, formatDate, info, ok, pri
 const LOGIN_OPTIONS = {
     url: { type: 'string' },
     username: { type: 'string', short: 'u' },
+    user: { type: 'string' },
     password: { type: 'string', short: 'p' },
     'save-password': { type: 'boolean' },
     'forget-password': { type: 'boolean' },
@@ -30,6 +31,7 @@ again; pass --force to sign in as another account.
 Options:
   --url <url>        Server URL (default: stored, then http://{HOST_NAME}:{PORT})
   -u, --username     Account name (also ${ENV.username})
+     --user           Alias for --username
   -p, --password     Password (also ${ENV.password})
   --save-password    Also store the password for git push/pull/clone
   --forget-password  Remove any password saved by an earlier login
@@ -49,6 +51,7 @@ Create an account (when the server allows registration) and sign in.
 Options:
   --url <url>        Server URL
   -u, --username     Account name (also ${ENV.username})
+     --user           Alias for --username
   -p, --password     Password (also ${ENV.password})
   --save-password    Also store the password for git push/pull/clone
   --forget-password  Remove any password saved by an earlier login
@@ -133,7 +136,7 @@ export async function loginCommand(argv) {
         return printLoginHelp();
     const stored = readStoredConfig();
     const url = resolveUrl(text(values.url));
-    const flagUser = trimmed(values.username) ?? trimmed(positionals[0]);
+    const flagUser = trimmed(values.username) ?? trimmed(values.user) ?? trimmed(positionals[0]);
     const envUser = trimmed(process.env[ENV.username]);
     const flagPassword = text(values.password) ?? process.env[ENV.password];
     // 1. A valid stored session wins: do not ask for the username again.
@@ -186,6 +189,7 @@ export async function registerCommand(argv) {
     const stored = readStoredConfig();
     const url = resolveUrl(text(values.url));
     const username = trimmed(values.username) ??
+        trimmed(values.user) ??
         trimmed(positionals[0]) ??
         trimmed(process.env[ENV.username]) ??
         stored.username;
@@ -258,7 +262,6 @@ export async function logoutCommand(argv) {
     const stored = readStoredConfig();
     writeStoredConfig({
         url: stored.url ?? config.url,
-        username: stored.username ?? config.username,
     });
     if (values.json) {
         printJson({ loggedOut: revoked, url: config.url });

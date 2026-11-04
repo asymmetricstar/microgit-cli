@@ -154,6 +154,7 @@ export async function startShell() {
         removeHistoryDuplicates: true,
         completer: complete,
     });
+    const originalWriteToOutput = rl._writeToOutput;
     let closed = false;
     let draining = false;
     const queue = [];
@@ -174,12 +175,14 @@ export async function startShell() {
     const askSecretLine = (question) => new Promise((resolve) => {
         process.stdout.write(question);
         const internal = rl;
-        const original = internal._writeToOutput;
+        // Use the real echo function captured at startup, in case a previous
+        // call left _writeToOutput overridden.
+        const echo = typeof originalWriteToOutput === 'function' ? originalWriteToOutput : internal._writeToOutput;
         internal._writeToOutput = () => { };
         pending = {
             resolve,
             cleanup: () => {
-                internal._writeToOutput = original;
+                internal._writeToOutput = echo;
                 process.stdout.write('\n');
             },
         };

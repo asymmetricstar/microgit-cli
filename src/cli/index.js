@@ -1,7 +1,9 @@
 import { CliError } from '../error/index.js';
+import fs from 'node:fs';
 import { printHelp, printVersion } from '../help/index.js';
 import { dispatch } from '../commands/registry.js';
 import { startShell } from './repl.js';
+import { configFilePath, normalizeUrl, readStoredConfig, writeStoredConfig } from '../config/index.js';
 /** Only start the shell when a person is actually looking at the terminal. */
 export function isInteractive() {
     return Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY);
@@ -10,8 +12,32 @@ export async function main(argv) {
     const [command, ...rest] = argv;
     if (command === undefined) {
         // Bare `microgit` opens the shell; piped runs still get the help output.
-        if (isInteractive())
+        if (isInteractive()) {
+            // First run: no config file yet → ask for the server URL.
+            const stored = readStoredConfig();
+            const fileExists = (() => {
+                try {
+                    fs.accessSync(configFilePath());
+                    return true;
+                }
+                catch {
+                    return false;
+                }
+            })();
+            if (!fileExists) {
+                const readline = await import('node:readline');
+                const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                const answer = await new Promise((resolve) => {
+                    rl.question('Server URL (e.g. http://127.0.0.1:80): ', (a) => resolve(a.trim()));
+                });
+                rl.close();
+                const url = normalizeUrl(answer || 'http://127.0.0.1:3000');
+                writeStoredConfig({ ...stored, url });
+                console.log(`Saved server URL: ${url}`);
+                console.log('');
+            }
             return startShell();
+        }
         printHelp();
         return;
     }

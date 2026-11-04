@@ -1,13 +1,10 @@
 # microgit-cli
 
-`microgit` — **your own git server — clone, push, host**.
+`microgit` - **your own git server - clone, push, host**.
 
-A small command line client for the [microgit](npm@microgit) server. It keeps the API
+A small command line client for the [microgit-server](https://www.npmjs.com/package/microgit-server) server. It keeps the API
 session in a local config file, creates and deletes repositories, and wraps the
 usual `git` commands so push/pull work with the account credentials.
-
-It is a separate TypeScript project with **no runtime dependencies** (Node's
-built-in `fetch`, `readline` and `git` are enough).
 
 
 ## Install
@@ -16,11 +13,6 @@ built-in `fetch`, `readline` and `git` are enough).
 npm install -g microgit-cli
 ```
 
-Without a global install, run the built entry point directly:
-
-```bash
-node src/index.js --help
-```
 
 ## Interactive shell
 
@@ -61,20 +53,22 @@ Errors never close the shell. A command that asks something (`login`,
 ## Quick start
 
 ```bash
-# 1. Point the CLI at the server and sign in. Use the host and port the
-#    server actually listens on, or its domain behind a reverse proxy.
-microgit login --url http://{HOST_NAME}:{PORT}
+# 1. Register an account (non-interactive example).
+microgit register --url http://127.0.0.1:80 --user abc --password 1234
 
-# 2. Create a repository and a local checkout with a first commit,
+# 2. Sign in (non-interactive example).
+microgit login --url http://127.0.0.1:80 --user abc --password 1234
+
+# 3. Create a repository and a local checkout with a first commit,
 #    then push it.
 microgit new app --init
 
-# 3. Work as usual; commit also pushes.
+# 4. Work as usual; commit also pushes.
 cd app
 echo "hello" > hello.txt
 microgit commit -m "Add hello.txt"
 
-# 4. Check the session or list repositories.
+# 5. Check the session or list repositories.
 microgit whoami
 microgit list
 ```
@@ -99,7 +93,7 @@ only asked for once. Add `--force` to sign in as another account.
 | `microgit commit -m "message"` | `git add -A`, commit, then push |
 | `microgit push [git args]` | Push with stored credentials |
 | `microgit pull [git args]` | Pull with stored credentials |
-| `microgit config` | Show the config file, server and session |
+| `microgit config` | Show or edit the config file and session |
 
 Every command accepts `-h` / `--help`. Commands that print API data also accept
 `--json` where it makes sense (`whoami`, `list`, `new`, `delete`, `clone`,
@@ -205,6 +199,7 @@ microgit config set url https://git.example.com
 microgit config set username alice
 microgit config unset password
 microgit config clear
+microgit config edit              # open config.json in $EDITOR / notepad
 ```
 
 Environment variables override the file for one command:

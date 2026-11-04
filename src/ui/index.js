@@ -38,10 +38,13 @@ export async function ask(question) {
         return promptHandlers.ask(question);
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     try {
-        return (await askWith(rl, question)).trim();
+        const answer = await askWith(rl, question);
+        return answer.trim();
     }
     finally {
         rl.close();
+        // Give the interface time to release stdin before the next prompt.
+        await new Promise((resolve) => setImmediate(resolve));
     }
 }
 /** Read a password without echoing it; falls back to a normal line off a TTY. */
@@ -65,6 +68,7 @@ export async function askSecret(question) {
     }
     finally {
         rl.close();
+        await new Promise((resolve) => setImmediate(resolve));
     }
 }
 /** Ask a yes/no question; non-interactive runs use the fallback. */
