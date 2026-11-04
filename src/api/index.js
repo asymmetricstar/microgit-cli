@@ -31,15 +31,25 @@ export class ApiClient {
             headers['Content-Type'] = 'application/json';
         let response;
         try {
+            // Use a signal that ensures the fetch does not hang indefinitely
+            const abortController = new AbortController();
+            const timeoutId = setTimeout(() => {
+                abortController.abort('Network timeout or server unreachable');
+            }, 1_000);
             response = await fetch(this.endpoint(pathname), {
                 method,
                 headers,
                 body: body === undefined ? undefined : JSON.stringify(body),
-                signal: AbortSignal.timeout(20_000),
+                signal: abortController.signal,
             });
+            clearTimeout(timeoutId);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
+            // Check if it's a network/reachability issue
+            if (message.includes('Cannot reach') || message.includes('fetch failed') || message.includes('Failed to fetch') || message.includes('NetworkError') || message.includes('ECONNREFUSED') || message.includes('ENOTFOUND') || message.includes('timeout')) {
+                throw new CliError(`Cannot reach ${this.baseUrl}. Please check your connection or server status.`);
+            }
             throw new CliError(`Cannot reach ${this.baseUrl}: ${message}`);
         }
         const text = await response.text();

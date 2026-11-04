@@ -18,7 +18,7 @@ Run `microgit` with no arguments (or `$ microgit shell`) to open the shell:
 
 ```
  μgit ━━━━ ●
-      ┣━━━ ●   microgit-cli • gitserver  v0.1.0
+      ┣━━━ ●   microgit-cli • gitserver  v0.0.0
       ┗━━━ ●   your own git server — clone, push, host
 
   # server   http://{HOST_NAME}:{PORT}
@@ -148,30 +148,6 @@ microgit list --public --page 2 --json
 
 ## Authentication and git credentials
 
-The JSON API uses the session token returned by `login`. The CLI sends it as
-`Authorization: Bearer <token>` and stores it in the config file. Git uses HTTP
-Basic with the **account username and password**, not the API token.
-
-For that reason `login` only stores the token by default. Add
-`--save-password` to also store the password, which makes `push`, `pull`,
-`clone` of a private repository and `new --init` work without another prompt:
-
-```bash
-microgit login --save-password
-```
-
-The password is stored in plain text in the config file. The file is created
-with mode `600` on Unix; on Windows the user profile permissions apply. If you
-do not want to store it, leave `--save-password` off and let `git` ask when it
-needs credentials, or set `MICROGIT_PASSWORD` for one command:
-
-```bash
-MICROGIT_PASSWORD='alicepass1' microgit push
-```
-
-Logging in again keeps a saved password when the username is unchanged; pass
-`--forget-password` to remove it.
-
 The CLI passes credentials to git as an `http.extraHeader`, so they are **not**
 written into `.git/config` and are not part of the clone URL.
 
@@ -191,7 +167,6 @@ microgit config unset password
 microgit config clear
 microgit config edit              # open config.json in $EDITOR / notepad
 ```
-
 
 ## Domains
 

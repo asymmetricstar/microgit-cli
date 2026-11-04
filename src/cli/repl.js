@@ -9,6 +9,59 @@ import { commandNames, dispatch, findCommand } from '../commands/registry.js';
 import { BIN } from '../config/settings.js';
 import { shellBanner } from '../theme/index.js';
 import { cyan, dim, faint, red, usePromptHandlers } from '../ui/index.js';
+/** Get directory and file completions for a given path prefix. */
+function getDirAndFileCompletions(prefix) {
+    try {
+        let dirToList;
+        let namePrefix;
+        // Split by the last path separator
+        const lastSlash = Math.max(prefix.lastIndexOf('/'), prefix.lastIndexOf('\\'));
+        if (lastSlash !== -1) {
+            dirToList = prefix.slice(0, lastSlash + 1);
+            namePrefix = prefix.slice(lastSlash + 1);
+        }
+        else {
+            dirToList = '.';
+            namePrefix = prefix;
+        }
+        // Resolve the directory to list
+        let resolveBase = dirToList === '.' ? process.cwd() : dirToList;
+        // Handle './' or '.\\'
+        if (resolveBase === './' || resolveBase === '.\\') {
+            resolveBase = process.cwd();
+        }
+        const resolvedDir = path.resolve(resolveBase);
+        let entries = [];
+        try {
+            entries = fs.readdirSync(resolvedDir, { withFileTypes: true });
+        }
+        catch {
+            return [];
+        }
+        const hits = entries
+            .filter((entry) => entry.name.startsWith(namePrefix))
+            .map((entry) => {
+            // Reconstruct the path with the prefix
+            let correctPath;
+            if (dirToList === '.' || dirToList === './' || dirToList === '.\\') {
+                correctPath = dirToList === '.' ? entry.name : `${dirToList}${entry.name}`;
+            }
+            else {
+                // Ensure the dirToList ends with a separator if it doesn't
+                const dirEndsWithSep = dirToList.endsWith('/') || dirToList.endsWith('\\');
+                correctPath = dirEndsWithSep ? `${dirToList}${entry.name}` : `${dirToList}/${entry.name}`;
+            }
+            if (entry.isDirectory()) {
+                return `${correctPath}/`;
+            }
+            return correctPath;
+        });
+        return hits;
+    }
+    catch {
+        return [];
+    }
+}
 const HISTORY_LIMIT = 500;
 const CONFIG_ACTIONS = ['show', 'path', 'set', 'unset', 'clear'];
 const EXIT_WORDS = ['exit', 'quit', 'q', ':q'];
@@ -107,14 +160,20 @@ function complete(line) {
     if (tokens.length <= 1) {
         pool = [...commandNames(), 'clear', 'exit', 'help'];
     }
-    else if (first === 'config' && tokens.length === 2) {
+    else if (first.toLowerCase() === 'config' && tokens.length === 2) {
         pool = CONFIG_ACTIONS;
     }
-    else if (current.startsWith('-')) {
-        pool = [...(findCommand(first)?.flags ?? [])];
-    }
     else {
-        pool = [];
+        const cmd = findCommand(first);
+        if (cmd?.dirCompletes && tokens.length === 2) {
+            pool = getDirAndFileCompletions(current);
+        }
+        else if (current.startsWith('-')) {
+            pool = [...(cmd?.flags ?? [])];
+        }
+        else {
+            pool = [];
+        }
     }
     const hits = [...new Set(pool)].filter((candidate) => candidate.startsWith(current)).sort();
     if (hits.length === 0)

@@ -1,3 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const packageJsonPath = path.resolve(__dirname, '../../package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+const VERSION = packageJson.version;
 /**
  * Every static, user-facing name in one place. Change these and the banners,
  * prompt, help page, messages, environment variables and config folder follow.
@@ -9,25 +16,25 @@
  */
 export const SETTINGS = {
     /** npm package name (`name` in package.json). */
-    packageName: 'microgit-cli',
+    packageName: "microgit-cli",
     /** Command installed on PATH (`bin` in package.json). */
-    bin: 'microgit',
+    bin: "microgit",
     /** Product name shown in banners and help. */
-    name: 'microgit-cli',
+    name: "microgit-cli",
     /** Wordmark at the start of the ASCII logo: `μgit ━━━ ●`. */
-    mark: 'μgit',
-    version: '0.1.6',
+    mark: "μgit",
+    version: VERSION,
     /** Short label printed next to the name: `microgit-cli • <label>`. */
-    label: 'git client',
-    tagline: 'manage your own git server — clone, push, host',
+    label: "mit",
+    tagline: "manage your own git server — clone, push, host",
     /** One-line description for package.json and README. */
-    description: 'Command line client for a self-hosted git server',
+    description: "Command line client for a self-hosted git server",
     /** Footer line in the boxed logo and the one-line version. */
-    footer: 'zero deps · Node 21+',
+    footer: "Free and Open Source",
     /** Prefix for environment variables (MICROGIT_URL, MICROGIT_TOKEN, ...). */
-    envPrefix: 'MICROGIT',
+    envPrefix: "MICROGIT",
     /** Folder under the home directory holding config.json and history. */
-    configDir: '.microgit',
+    configDir: ".microgit",
 };
 /** The command users type. */
 export const BIN = SETTINGS.bin;
