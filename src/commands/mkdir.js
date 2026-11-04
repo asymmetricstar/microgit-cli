@@ -12,7 +12,7 @@ export async function mkdirCommand(argv) {
         fail(`Directory path is required. Usage: ${BIN} mkdir <path>`);
     }
     try {
-        if (typeof dirPath !== 'string' || dirPath.trim() === '') {
+        if (dirPath.trim() === '') {
             throw new CliError('Invalid directory path provided.');
         }
         // Ensure the path is absolute or relative to current dir

@@ -53,23 +53,20 @@ export async function askSecret(question) {
         return promptHandlers.askSecret(question);
     if (!process.stdin.isTTY)
         return ask(question);
-    process.stdout.write(question);
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
         terminal: true,
     });
-    const internal = rl;
-    internal._writeToOutput = () => { };
-    try {
-        const answer = await askWith(rl, '');
-        process.stdout.write('\n');
-        return answer;
-    }
-    finally {
-        rl.close();
-        await new Promise((resolve) => setImmediate(resolve));
-    }
+    return new Promise((resolve) => {
+        process.stdout.write(`${question} `);
+        rl.question('', (answer) => {
+            process.stdout.write('\n');
+            rl.close();
+            // Give the interface time to release stdin before the next prompt.
+            setImmediate(() => resolve(answer));
+        });
+    });
 }
 /** Ask a yes/no question; non-interactive runs use the fallback. */
 export async function confirm(question, fallback = false) {

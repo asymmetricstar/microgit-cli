@@ -41,12 +41,7 @@ export function printHelp() {
     section('Environment');
     out.push(`    ${dim(`${ENV.url} · ${ENV.token} · ${ENV.username} · ${ENV.password}`)}`);
     out.push(`    ${dim(ENV.config)}   Config file path (default ~/${SETTINGS.configDir}/config.json)`);
-    section('Quick start');
-    out.push(`    ${cyan(`${BIN} login --url http://{HOST_NAME}:{PORT}`)}`);
-    out.push(`    ${cyan(`${BIN} new app --init`)}`);
-    out.push(`    ${cyan('cd app')}`);
-    out.push(`    ${cyan(`${BIN} commit -m "First change"`)}`);
-    out.push(`    ${cyan(`${BIN} whoami`)}`);
+    out.push('');
     console.log(out.join('\n'));
 }
 //# sourceMappingURL=index.js.map

@@ -62,6 +62,17 @@ function getDirAndFileCompletions(prefix) {
         return [];
     }
 }
+/** Temporary diagnostic sink, enabled with MICROGIT_DEBUG. */
+function debugLog(message) {
+    if (!process.env.MICROGIT_DEBUG)
+        return;
+    try {
+        fs.appendFileSync(path.join(process.cwd(), 'debug.log'), `${message}\n`);
+    }
+    catch {
+        // Diagnostics must never break the shell.
+    }
+}
 const HISTORY_LIMIT = 500;
 const CONFIG_ACTIONS = ['show', 'path', 'set', 'unset', 'clear'];
 const EXIT_WORDS = ['exit', 'quit', 'q', ':q'];
@@ -213,13 +224,13 @@ export async function startShell() {
         removeHistoryDuplicates: true,
         completer: complete,
     });
-    const originalWriteToOutput = rl._writeToOutput;
     let closed = false;
     let draining = false;
     const queue = [];
     /** Set while a running command is waiting for an answer. */
     let pending = null;
     const finishPending = (answer) => {
+        debugLog(`finishPending(${JSON.stringify(answer)}) pending=${pending !== null} line=${JSON.stringify(rl.line)}`);
         const current = pending;
         pending = null;
         if (current === null)
@@ -228,15 +239,23 @@ export async function startShell() {
         current.resolve(answer);
     };
     const askLine = (question) => new Promise((resolve) => {
-        process.stdout.write(question);
+        debugLog(`askLine(${JSON.stringify(question)})`);
+        // Let readline own the question text so the screen stays in sync and
+        // editing keys (backspace, delete, arrows) keep working instead of
+        // garbling the interface or dropping out of the prompt.
+        rl.setPrompt(question);
+        rl.prompt();
         pending = { resolve, cleanup: () => { } };
     });
     const askSecretLine = (question) => new Promise((resolve) => {
-        process.stdout.write(question);
         const internal = rl;
-        // Use the real echo function captured at startup, in case a previous
-        // call left _writeToOutput overridden.
-        const echo = typeof originalWriteToOutput === 'function' ? originalWriteToOutput : internal._writeToOutput;
+        // Capture the real echo function before we override it.
+        const echo = internal._writeToOutput;
+        // Draw the question as readline's prompt so the screen stays in sync,
+        // then hide typed characters while the password is entered.
+        internal._writeToOutput = echo;
+        rl.setPrompt(question);
+        rl.prompt();
         internal._writeToOutput = () => { };
         pending = {
             resolve,
@@ -247,6 +266,7 @@ export async function startShell() {
         };
     });
     const prompt = () => {
+        debugLog('prompt()');
         rl.setPrompt(promptText());
         rl.prompt();
     };
@@ -332,6 +352,7 @@ export async function startShell() {
             history.shift();
     };
     rl.on('line', (line) => {
+        debugLog(`line(${JSON.stringify(line)}) pending=${pending !== null}`);
         if (pending !== null) {
             finishPending(line);
             dropFromHistory(line);
@@ -341,6 +362,7 @@ export async function startShell() {
         void drain();
     });
     rl.on('SIGINT', () => {
+        debugLog('SIGINT');
         if (pending !== null) {
             // Cancel the question; the command reports the empty answer itself.
             finishPending('');

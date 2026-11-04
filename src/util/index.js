@@ -17,9 +17,21 @@ export function positiveInt(value, option, fallback) {
     }
     return parsed;
 }
-/** `name`, `name.git`, `owner/name` and `owner/name.git` all work. */
+/** `name`, `name.git`, `owner/name`, `owner/name.git` or `http://<ip>/<user>/<repo>.git` all work. */
 export function parseTarget(raw) {
-    const cleaned = raw.trim().replace(/\.git$/i, '');
+    const trimmedRaw = raw.trim();
+    // Check if it's a URL format: http://<ip>/<user>/<repo>.git or https://<ip>/<user>/<repo>.git
+    const urlMatch = trimmedRaw.match(/^(https?:\/\/[^/]+)\/(.+)\.git$/i);
+    if (urlMatch) {
+        const baseUrl = urlMatch[1];
+        const pathPart = urlMatch[2];
+        const pathParts = pathPart.split('/').filter((part) => part !== '');
+        if (pathParts.length === 2) {
+            return { owner: pathParts[0], name: pathParts[1], cloneUrl: `${baseUrl}/${pathParts[0]}/${pathParts[1]}.git` };
+        }
+        throw new CliError(`Expected http://<ip>/<user>/<repo>.git, got '${raw}'.`);
+    }
+    const cleaned = trimmedRaw.replace(/\.git$/i, '');
     const parts = cleaned.split('/').filter((part) => part !== '');
     if (parts.length === 1)
         return { name: parts[0] ?? '' };

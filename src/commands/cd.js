@@ -11,8 +11,7 @@ export async function cdCommand(argv) {
         fail('Directory path is required. Usage: change <repo_directory>');
     }
     try {
-        // Input validation: Check if the path seems valid (basic check)
-        if (typeof targetPath !== 'string' || targetPath.trim() === '') {
+        if (targetPath.trim() === '') {
             throw new CliError('Invalid directory path provided.');
         }
         // Attempt to change directory

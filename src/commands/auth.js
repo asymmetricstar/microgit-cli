@@ -144,23 +144,32 @@ export async function loginCommand(argv) {
         if (await reuseSession(text(values.url), stored, Boolean(values.json)))
             return;
     }
-    const username = flagUser ?? envUser ?? stored.username;
-    let user = username;
-    if (!user) {
-        if (!process.stdin.isTTY)
-            fail('Username is required. Pass --username or run interactively.');
-        user = await ask('Username: ');
-    }
+    let username = flagUser ?? envUser;
     let password = flagPassword;
-    if (!password) {
-        if (!process.stdin.isTTY)
-            fail('Password is required. Pass --password or set the password env var.');
-        password = await askSecret('Password: ');
+    // Prompt only if not in terminal command mode (no --url flag or positional url)
+    const hasUrlArg = argv.includes('--url') || argv.some(a => a.startsWith('http://') || a.startsWith('https://'));
+    if (!username) {
+        if (!hasUrlArg) {
+            username = await ask('Username: ');
+        }
+        else {
+            fail('Username is required. Use the --user or --username flag.');
+        }
     }
+    if (!password) {
+        if (!hasUrlArg && username) {
+            password = await askSecret('Password: ');
+        }
+        else if (hasUrlArg) {
+            fail('Password is required. Use the --password flag.');
+        }
+    }
+    if (!username)
+        fail('Username is required.');
     if (!password)
-        fail('Password cannot be empty.');
+        fail('Password is required.');
     const api = new ApiClient(url);
-    const result = await api.login(user, password);
+    const result = await api.login(username, password);
     saveSession(url, result.user.username, result.token, result.expiresAt, values['save-password'] ? password : undefined, Boolean(values['forget-password']));
     if (values.json) {
         printJson({
@@ -188,30 +197,35 @@ export async function registerCommand(argv) {
         return printRegisterHelp();
     const stored = readStoredConfig();
     const url = resolveUrl(text(values.url));
-    const username = trimmed(values.username) ??
+    let username = trimmed(values.username) ??
         trimmed(values.user) ??
         trimmed(positionals[0]) ??
-        trimmed(process.env[ENV.username]) ??
-        stored.username;
-    let user = username;
-    if (!user) {
-        if (!process.stdin.isTTY)
-            fail('Username is required. Pass --username or run interactively.');
-        user = await ask('Username: ');
-    }
+        trimmed(process.env[ENV.username]);
     let password = text(values.password) ?? process.env[ENV.password];
-    if (!password) {
-        if (!process.stdin.isTTY)
-            fail('Password is required. Pass --password or set the password env var.');
-        password = await askSecret('Password: ');
-        const repeated = await askSecret('Repeat password: ');
-        if (password !== repeated)
-            fail('Passwords do not match.');
+    // Prompt only if not in terminal command mode (no --url flag or positional url)
+    const hasUrlArg = argv.includes('--url') || argv.some(a => a.startsWith('http://') || a.startsWith('https://'));
+    if (!username) {
+        if (!hasUrlArg) {
+            username = await ask('Username: ');
+        }
+        else {
+            fail('Username is required. Use the --user or --username flag.');
+        }
     }
+    if (!password) {
+        if (!hasUrlArg && username) {
+            password = await askSecret('Password: ');
+        }
+        else if (hasUrlArg) {
+            fail('Password is required. Use the --password flag.');
+        }
+    }
+    if (!username)
+        fail('Username is required.');
     if (!password)
-        fail('Password cannot be empty.');
+        fail('Password is required.');
     const api = new ApiClient(url);
-    const result = await api.register(user, password);
+    const result = await api.register(username, password);
     saveSession(url, result.user.username, result.token, result.expiresAt, values['save-password'] ? password : undefined, Boolean(values['forget-password']));
     if (values.json) {
         printJson({

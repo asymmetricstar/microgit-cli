@@ -35,7 +35,7 @@ export class ApiClient {
             const abortController = new AbortController();
             const timeoutId = setTimeout(() => {
                 abortController.abort('Network timeout or server unreachable');
-            }, 1_000);
+            }, 10_000);
             response = await fetch(this.endpoint(pathname), {
                 method,
                 headers,

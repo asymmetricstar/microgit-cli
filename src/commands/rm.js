@@ -12,8 +12,7 @@ export async function rmCommand(argv) {
         return;
     }
     try {
-        // Input validation: Check if the path seems valid
-        if (typeof targetPath !== 'string' || targetPath.trim() === '') {
+        if (targetPath.trim() === '') {
             throw new CliError('Invalid path provided.');
         }
         const resolvedPath = path.resolve(targetPath);

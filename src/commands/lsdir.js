@@ -7,11 +7,11 @@ import { info, fail } from '../ui/index.js';
 export async function lsdirCommand(argv) {
     const targetPath = argv.length > 0 ? argv.join(' ') : '.';
     try {
-        if (typeof targetPath !== 'string' || targetPath.trim() === '') {
+        if (targetPath.trim() === '') {
             throw new Error('Invalid path provided.');
         }
         const resolvedPath = path.resolve(targetPath);
-        const dirName = targetPath === '.' || targetPath === '' ? path.basename(resolvedPath) : path.basename(resolvedPath);
+        const dirName = path.basename(resolvedPath);
         const entries = fs.readdirSync(resolvedPath, { withFileTypes: true });
         if (entries.length === 0) {
             info(`No entries found in '${dirName}' folder.`);

@@ -37,6 +37,7 @@ export function shellBanner(config) {
     }
     rows.push('');
     rows.push(`  ${green('✓')} ${dim('ready')} ${faint('·')} ${dim('type')} ${cyan('help')} ${dim('to list the commands')}`);
+    rows.push(`  ${green('✓')} ${dim('ready')} ${faint('·')} ${dim('use')} ${cyan('config')} ${dim('to manage settings')}`);
     if (config?.token)
         rows.push(`  ${faint('#')} ${dim('one-shot')} ${dim(`${BIN} --help`)}`);
     return rows.join('\n');

@@ -219,7 +219,7 @@ export async function cloneCommand(argv) {
         },
     });
     if (values.help) {
-        console.log(`Usage: ${BIN} clone <name|owner/name> [directory] [options]
+        console.log(`Usage: ${BIN} clone <name|owner/name|url> [directory] [options]
 
 Clone a repository using the URL returned by the server.
 
@@ -231,19 +231,31 @@ Options:
 
 Examples:
   ${BIN} clone app
-  ${BIN} clone alice/app ./checkout`);
+  ${BIN} clone alice/app ./checkout
+  ${BIN} clone http://127.0.0.1/alice/app.git ./checkout`);
         return;
     }
     const target = trimmed(positionals[0]);
     if (!target)
-        fail(`Repository is required. Usage: ${BIN} clone <name|owner/name>`);
+        fail(`Repository is required. Usage: ${BIN} clone <name|owner/name|url>`);
     const parsed = parseTarget(target);
     const config = loadConfig(text(values.url));
-    const owner = parsed.owner ?? config.username;
-    if (!owner)
-        fail('No owner given and no username stored. Use <owner/name> or log in first.');
+    let repo;
     const api = new ApiClient(config.url, config.token);
-    const repo = await api.repo(owner, parsed.name);
+    if (parsed.cloneUrl) {
+        // Use the URL format: http://<ip>/<user>/<repo>.git
+        const owner = parsed.owner;
+        const name = parsed.name;
+        if (!owner)
+            fail('No owner given in URL. Use http://<ip>/<user>/<repo>.git or <owner/name>.');
+        repo = await api.repo(owner, name);
+    }
+    else {
+        const owner = parsed.owner ?? config.username;
+        if (!owner)
+            fail('No owner given and no username stored. Use <owner/name> or log in first.');
+        repo = await api.repo(owner, parsed.name);
+    }
     const dir = trimmed(values.dir) ?? trimmed(positionals[1]) ?? repo.name;
     await cloneRepo(repo, dir, config);
     if (values.json) {

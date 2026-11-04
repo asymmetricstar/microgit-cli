@@ -154,19 +154,19 @@ written into `.git/config` and are not part of the clone URL.
 The server's message of the day, when it publishes one, is printed after
 `login`, `register` and `whoami`.
 
-## Config file
+### Managing the config
 
-Default location: `~/.microgit/config.json`. Use `MICROGIT_CONFIG` to point at a
-different file, for example one per server:
+All through `microgit config`:
 
-```bash
-microgit config
-microgit config set url https://git.example.com
-microgit config set username alice
-microgit config unset password
-microgit config clear
-microgit config edit              # open config.json in $EDITOR / notepad
-```
+| Command | What it does |
+| --- | --- |
+| `microgit config` | Interactive menu to view/edit/clear fields |
+| `microgit config show` | Print current settings (token masked) |
+| `microgit config path` | Print the config file path |
+| `microgit config set <key> <value>` | Set `url`, `username`, `token` or `password` |
+| `microgit config unset <key>` | Remove `token`, `password`, `username` or `expiresAt` |
+| `microgit config clear` | Delete the config file entirely |
+| `microgit config edit` | Open the file in `$EDITOR` / `$VISUAL` (or Notepad on Windows) |
 
 ## Domains
 
