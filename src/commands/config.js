@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { clearStoredConfig, configFilePath, loadConfig, normalizeUrl, readStoredConfig, writeStoredConfig, } from '../config/index.js';
 import { BIN } from '../config/settings.js';
-import { ask, fail, formatDate, info, ok, printJson } from '../ui/index.js';
+import { ask, fail, info, ok } from '../ui/index.js';
 function mask(value) {
     if (value.length <= 8)
         return 'saved';
@@ -141,28 +141,5 @@ export async function configCommand(argv) {
         return;
     }
     fail(`Unknown config action '${action}'. Try: ${BIN} config`);
-}
-function showConfig(json) {
-    const config = loadConfig();
-    const stored = readStoredConfig();
-    const token = config.token;
-    if (json) {
-        printJson({
-            configPath: config.configPath,
-            url: config.url,
-            username: config.username ?? null,
-            token: token ? 'saved' : null,
-            expiresAt: config.expiresAt ?? null,
-            password: config.password ? 'saved' : null,
-        });
-        return;
-    }
-    const row = (label, value) => `  ${label.padEnd(12)} ${value}`;
-    console.log(row('Config file', config.configPath));
-    console.log(row('Server', config.url));
-    console.log(row('Username', config.username ?? '-'));
-    console.log(row('Token', token ? mask(token) : '-'));
-    console.log(row('Expires', formatDate(config.expiresAt)));
-    console.log(row('Password', stored.password ? 'saved (plain text)' : '-'));
 }
 //# sourceMappingURL=config.js.map

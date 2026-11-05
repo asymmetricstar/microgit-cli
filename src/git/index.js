@@ -60,7 +60,21 @@ export async function gitChecked(args, options = {}) {
     const inherit = options.inherit ?? true;
     const result = await git(args, { ...options, inherit });
     if (result.code !== 0) {
-        throw new CliError(`git ${args.join(' ')} failed with exit code ${result.code}.`);
+        let message = `git ${args.join(' ')} failed with exit code ${result.code}.`;
+        const output = (result.stdout + ' ' + result.stderr).toLowerCase();
+        const isAuthError = output.includes('401') ||
+            output.includes('authentication failed') ||
+            output.includes('access denied') ||
+            output.includes('invalid username or password') ||
+            output.includes('could not read username') ||
+            output.includes('remote: invalid') ||
+            output.includes('http:');
+        if (isAuthError && args[0] === 'push') {
+            message +=
+                ' Kimlik doğrulama hatası (olası 401). ' +
+                    `Run \`${BIN} login --save-password\` veya ${ENV.password} ortam değişkenini ayarlayın.`;
+        }
+        throw new CliError(message);
     }
 }
 /** Run a git command and return its trimmed stdout. */
@@ -155,8 +169,9 @@ export async function pushRepo(config, extra = [], cwd = process.cwd()) {
         throw new CliError(`This repository has no 'origin' remote. Use \`${BIN} clone <owner/name>\` or add one with git.`);
     }
     const auth = gitAuth(config);
-    if (!auth && !process.stdin.isTTY) {
-        throw new CliError(`No saved git password. Run \`${BIN} login --save-password\` or set ${ENV.password}.`);
+    if (!auth) {
+        throw new CliError(`Git push için kimlik bilgisi eksik (username/password). ` +
+            `Run \`${BIN} login --save-password\` veya ${ENV.password} ortam değişkenini ayarlayın.`);
     }
     const args = extra.length > 0
         ? ['push', ...extra]

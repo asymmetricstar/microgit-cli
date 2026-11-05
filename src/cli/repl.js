@@ -77,7 +77,7 @@ const HISTORY_LIMIT = 500;
 const CONFIG_ACTIONS = ['show', 'path', 'set', 'unset', 'clear'];
 const EXIT_WORDS = ['exit', 'quit', 'q', ':q'];
 /** Split a line into arguments, keeping quoted phrases in one argument. */
-export function tokenize(line) {
+function tokenize(line) {
     const tokens = [];
     let current = '';
     let quote = null;

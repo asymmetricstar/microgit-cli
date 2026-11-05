@@ -1,6 +1,8 @@
 import { loginCommand, logoutCommand, registerCommand, whoamiCommand } from './auth.js';
 import { configCommand } from './config.js';
+import { addCommand } from './add.js';
 import { commitCommand, initCommand, pullCommand, pushCommand, statusCommand } from './git.js';
+import { diffCommand } from './diff.js';
 import { cloneCommand, deleteCommand, listCommand, newCommand } from './repos.js';
 import { cdCommand } from './cd.js';
 import { mkdirCommand } from './mkdir.js';
@@ -153,6 +155,20 @@ export const COMMANDS = [
         summary: "Short git status of the current repository",
         flags: ["--help"],
         run: statusCommand,
+    },
+    {
+        name: "add",
+        group: "Git",
+        summary: "Stage files for commit (no args → all untracked, else the given paths)",
+        flags: ["--help"],
+        run: addCommand,
+    },
+    {
+        name: "diff",
+        group: "Git",
+        summary: "Show changes in the current repository (--stat, --staged, --quiet)",
+        flags: ["--stat", "--staged", "--quiet", "--no-renames", "--help"],
+        run: diffCommand,
     },
     {
         name: "commit",
