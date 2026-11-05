@@ -1,7 +1,7 @@
 import readline from 'node:readline';
 import { CliError } from '../error/index.js';
-import { faint, dim, bold, red, green, yellow, cyan, visibleWidth, box } from '../theme/palette.js';
-export { faint, dim, bold, red, green, yellow, cyan, visibleWidth, box };
+import { faint, dim, bold, red, green, yellow, cyan, visibleWidth, box, accentBlue, accentGreen } from '../theme/palette.js';
+export { faint, dim, bold, red, green, yellow, cyan, visibleWidth, box, accentBlue, accentGreen };
 /** A successful step. */
 export function ok(message) {
     console.log(`${green('✓')} ${message}`);

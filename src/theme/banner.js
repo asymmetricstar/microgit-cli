@@ -1,4 +1,4 @@
-import { bold, faint, dim, green, cyan } from './palette.js';
+import { bold, faint, dim, green, cyan, accentRedSignedOut } from './palette.js';
 import { DEFAULT_URL } from '../config/index.js';
 import { logoCompact } from './logo.js';
 import { BIN } from '../config/settings.js';
@@ -30,10 +30,10 @@ export function shellBanner(config) {
         rows.push(meta('account', `${bold(config.username)}${suffix}`));
     }
     else if (config?.username) {
-        rows.push(meta('account', `${dim(config.username)} ${faint('·')} ${dim('signed out')}`));
+        rows.push(meta('account', `${dim(config.username)} ${faint('·')} ${accentRedSignedOut('signed out')}`));
     }
     else {
-        rows.push(meta('account', `${dim('signed out')} ${faint('·')} ${cyan('login')} ${dim('to start a session')}`));
+        rows.push(meta('account', `${accentRedSignedOut('signed out')} ${faint('·')} ${cyan('login')} ${dim('to start a session')}`));
     }
     rows.push('');
     rows.push(`  ${green('✓')} ${dim('ready')} ${faint('·')} ${dim('type')} ${cyan('help')} ${dim('to list the commands')}`);

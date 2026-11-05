@@ -105,7 +105,13 @@ export async function ensureIdentity(cwd, username) {
 export async function cloneRepo(repo, dir, config) {
     const target = path.resolve(dir);
     if (fs.existsSync(target)) {
-        const entries = fs.readdirSync(target);
+        let entries;
+        try {
+            entries = fs.readdirSync(target);
+        }
+        catch (error) {
+            throw new CliError(`Directory is not empty or is not a directory: ${target}`);
+        }
         if (entries.length > 0) {
             throw new CliError(`Directory is not empty: ${target}`);
         }
@@ -120,8 +126,15 @@ export async function cloneRepo(repo, dir, config) {
 /** Create a local repository with a first commit and push it to the server. */
 export async function initRepo(repo, dir, config) {
     const target = path.resolve(dir);
-    if (fs.existsSync(target) && fs.readdirSync(target).length > 0) {
-        throw new CliError(`Directory is not empty: ${target}`);
+    if (fs.existsSync(target)) {
+        try {
+            if (fs.readdirSync(target).length > 0) {
+                throw new CliError(`Directory is not empty: ${target}`);
+            }
+        }
+        catch (error) {
+            throw new CliError(`Directory is not empty or is not a directory: ${target}`);
+        }
     }
     fs.mkdirSync(target, { recursive: true });
     await gitChecked(['init', '-b', 'main'], { cwd: target, inherit: false });

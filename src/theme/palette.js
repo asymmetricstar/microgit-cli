@@ -14,6 +14,19 @@ export const green = paint('38;5;114');
 export const yellow = paint('38;5;179');
 /** The single accent colour: nodes, command names, links. */
 export const cyan = paint('38;5;75');
+/**
+ * Brand accent colours, painted with truecolour (24-bit) so the exact hex
+ * values survive on any terminal that supports 24-bit colour. Kept separate
+ * from the 8/256-colour palette so the design green/red never drifts.
+ *
+ *   accentGreen   #17b88b  — logged-in user in the prompt
+ *   accentRed     #ff6c37  — brand red accent (reserved)
+ *   accentRedSignedOut  #dc5b5e  — "signed out" in the banner
+ */
+const paintHex = (r, g, b) => paint(`38;2;${r};${g};${b}`);
+export const accentGreen = paintHex(0x17, 0xb8, 0x8b);
+export const accentBlue = paintHex(0x58, 0xa1, 0xff);
+export const accentRedSignedOut = paintHex(0xdc, 0x5b, 0x5e);
 const ANSI = /\u001b\[[0-9;]*m/g;
 /** Length of a styled string as it appears on screen. */
 export function visibleWidth(value) {

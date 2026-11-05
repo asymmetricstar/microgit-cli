@@ -8,7 +8,7 @@ import { printHelp, printVersion } from '../help/index.js';
 import { commandNames, dispatch, findCommand } from '../commands/registry.js';
 import { BIN } from '../config/settings.js';
 import { shellBanner } from '../theme/index.js';
-import { cyan, dim, faint, red, usePromptHandlers } from '../ui/index.js';
+import { dim, faint, red, accentBlue, accentGreen, usePromptHandlers } from '../ui/index.js';
 /** Get directory and file completions for a given path prefix. */
 function getDirAndFileCompletions(prefix) {
     try {
@@ -154,13 +154,19 @@ function shortPath(cwd) {
 }
 function promptText() {
     let user = 'guest';
+    let token;
     try {
-        user = loadConfig().username ?? 'guest';
+        const config = loadConfig();
+        user = config.username ?? 'guest';
+        token = config.token;
     }
     catch {
         // A broken config file is reported by the command that needs it, not here.
     }
-    return `${cyan(`${user}@${BIN}`)}${dim(`:${shortPath(process.cwd())}`)} ${faint('$')} `;
+    // Token olmadan oturum açılmış sayılmaz: misafir (mavi), oturumlu kullanıcı (yeşil).
+    const isGuest = !token;
+    const userColor = isGuest ? accentBlue : accentGreen;
+    return `${userColor(user)}${faint('@')}${accentBlue(BIN)}${dim(`:${shortPath(process.cwd())}`)} ${faint('$')} `;
 }
 /** Commands and, after one is typed, its options. */
 function complete(line) {

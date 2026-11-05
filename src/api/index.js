@@ -53,8 +53,14 @@ export class ApiClient {
             throw new CliError(`Cannot reach ${this.baseUrl}: ${message}`);
         }
         const text = await response.text();
+        // A non-JSON content-type (e.g. text/html error page) is not a JSON body.
+        // An empty/missing header is tolerated so old servers without headers still
+        // work; only an explicit non-JSON type is rejected.
+        const contentType = response.headers?.get?.('content-type') || '';
+        const ct = contentType.trim().toLowerCase();
+        const isNotJson = ct.length > 0 && !ct.includes('json');
         let data = null;
-        if (text.trim() !== '') {
+        if (text.trim() !== '' && !isNotJson) {
             try {
                 data = JSON.parse(text);
             }
