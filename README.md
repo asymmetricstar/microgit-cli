@@ -6,7 +6,6 @@ session in a local config file, creates and deletes repositories, and wraps the
 usual `git` commands: one `login` is enough for `clone`, `commit`, `push` and
 `pull`, without any extra password setup.
 
-v0.1.15 Stable Version
 
 ## Install
 

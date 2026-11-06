@@ -1,6 +1,6 @@
 {
   "name": "microgit-cli",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "Command line client for a self-hosted git server (microgit)",
   "type": "module",
   "main": "src/index.js",
