@@ -2,7 +2,6 @@ import { bold, faint, dim, green, cyan, accentRedSignedOut } from './palette.js'
 import { DEFAULT_URL } from '../config/index.js';
 import { logoCompact } from './logo.js';
 import { BIN } from '../config/settings.js';
-/** "3d left", "5h left", "expired"; undefined when the session has no expiry. */
 export function sessionLeft(expiresAt) {
     if (!expiresAt)
         return undefined;
@@ -19,7 +18,6 @@ export function sessionLeft(expiresAt) {
         return `${Math.round(hours)}h left`;
     return `${Math.round(hours / 24)}d left`;
 }
-/** Session block printed when the interactive shell starts. */
 export function shellBanner(config) {
     const rows = ['', logoCompact(), ''];
     const meta = (label, value) => `  ${faint('#')} ${dim(label.padEnd(8))} ${value}`;

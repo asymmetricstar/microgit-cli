@@ -1,9 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { info, fail } from '../ui/index.js';
-/**
- * Lists the contents of a directory.
- */
 export async function lsdirCommand(argv) {
     const targetPath = argv.length > 0 ? argv.join(' ') : '.';
     try {

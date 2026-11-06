@@ -133,27 +133,58 @@ Example:
     else
         ok('Pushed.');
 }
+function extractUrl(argv) {
+    const rest = [];
+    let url;
+    for (let i = 0; i < argv.length; i += 1) {
+        const arg = argv[i];
+        if (arg === '--url') {
+            const next = argv[i + 1];
+            if (next !== undefined && !next.startsWith('-')) {
+                url = next;
+                i += 1;
+            }
+        }
+        else if (arg.startsWith('--url=')) {
+            url = arg.slice('--url='.length);
+        }
+        else {
+            rest.push(arg);
+        }
+    }
+    return { url, rest };
+}
 export async function pushCommand(argv) {
     if (argv.includes('--help') || argv.includes('-h')) {
-        console.log(`Usage: ${BIN} push [git push arguments]
+        console.log(`Usage: ${BIN} push [git push arguments] [--url <url>]
 
 Push the current branch with the saved credentials. Extra arguments are passed
-to git, for example: ${BIN} push --force-with-lease`);
+to git, for example: ${BIN} push --force-with-lease
+
+Options:
+  --url <url>   Server URL, credentials allowed: http://user:pass@host:port
+  -h, --help    Show this help`);
         return;
     }
-    const config = loadConfig();
-    await pushRepo(config, argv);
+    const { url, rest } = extractUrl(argv);
+    const config = loadConfig(url);
+    await pushRepo(config, rest);
     ok('Pushed.');
 }
 export async function pullCommand(argv) {
     if (argv.includes('--help') || argv.includes('-h')) {
-        console.log(`Usage: ${BIN} pull [git pull arguments]
+        console.log(`Usage: ${BIN} pull [git pull arguments] [--url <url>]
 
-Pull from origin with the saved credentials. Extra arguments are passed to git.`);
+Pull from origin with the saved credentials. Extra arguments are passed to git.
+
+Options:
+  --url <url>   Server URL, credentials allowed: http://user:pass@host:port
+  -h, --help    Show this help`);
         return;
     }
-    const config = loadConfig();
-    await pullRepo(config, argv);
+    const { url, rest } = extractUrl(argv);
+    const config = loadConfig(url);
+    await pullRepo(config, rest);
     ok('Pulled.');
 }
 //# sourceMappingURL=git.js.map

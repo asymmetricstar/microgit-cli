@@ -3,8 +3,10 @@
 
 A small command line client for the [microgit-server](https://www.npmjs.com/package/microgit-server) server. It keeps the API
 session in a local config file, creates and deletes repositories, and wraps the
-usual `git` commands so push/pull work with the account credentials.
+usual `git` commands: one `login` is enough for `clone`, `commit`, `push` and
+`pull`, without any extra password setup.
 
+v0.1.15 Stable Version
 
 ## Install
 
@@ -17,17 +19,20 @@ npm install -g microgit-cli
 Run `microgit` with no arguments (or `$ microgit shell`) to open the shell:
 
 ```
- μgit ━━━━ ●
-      ┣━━━ ●   microgit-cli • gitserver  v0.0.0
-      ┗━━━ ●   your own git server — clone, push, host
+  μgit ━━━━ ●
+       ┣━━━ ●   microgit-cli • MIT v0.1.15
+       ┗━━━ ●   manage your own git server — clone, push, host
 
-  # server   http://{HOST_NAME}:{PORT}
+  # server   http://127.0.0.1:3000
   # account  alice · 7d left
 
   ✓ ready · type help to list the commands
+  ✓ ready · use config to manage settings
+
   # one-shot microgit --help
 
-alice@microgit:~/repos$ new app
+  ↑↓ history   tab complete   clear to reset
+alice@microgit:~/Repo $
 ```
 
 Starting the shell clears the screen and the scrollback first, so the banner is
@@ -66,7 +71,11 @@ cd app
 echo "hello" > hello.txt
 microgit commit -m "Add hello.txt"
 
-# 5. Check the session or list repositories.
+# 5. The repository is now live at:
+#    http://127.0.0.1:80/abc/app.git
+#    (visit it, or clone it from anywhere with `microgit clone` / `git clone`).
+
+# 6. Check the session or list repositories.
 microgit whoami
 microgit list
 ```
@@ -78,9 +87,9 @@ only asked for once. Add `--force` to sign in as another account.
 
 | Command | What it does |
 | --- | --- |
-| `microgit login` | Sign in, store the API token and optionally the git password |
+| `microgit login` | Sign in and store the API token (already enough for git) |
 | `microgit register` | Create an account (when the server allows registration) and sign in |
-| `microgit logout` | Revoke the server session, remove the local token and password |
+| `microgit logout` | Revoke the server session, remove the local token, password and any password typed this run |
 | `microgit whoami` | Show the signed-in account, server and expiry |
 | `microgit new <name>` | Create a repository; asks public/private, plus `--private`, `--public`, `--clone`, `--init` |
 | `microgit list` | List repositories; `--owner`, `--name`, `--public`, `--private` |
@@ -89,8 +98,8 @@ only asked for once. Add `--force` to sign in as another account.
 | `microgit init [dir]` | Local only: project folder, `git init` and an empty `README.md` |
 | `microgit status` | `git status --short --branch` |
 | `microgit commit -m "message"` | `git add -A`, commit, then push |
-| `microgit push [git args]` | Push with stored credentials |
-| `microgit pull [git args]` | Pull with stored credentials |
+| `microgit push [git args]` | Push with the stored credentials; `--url http://user:pass@host` allowed |
+| `microgit pull [git args]` | Pull with the stored credentials; `--url http://user:pass@host` allowed |
 | `microgit config` | Show or edit the config file and session |
 
 Every command accepts `-h` / `--help`. Commands that print API data also accept
@@ -148,8 +157,39 @@ microgit list --public --page 2 --json
 
 ## Authentication and git credentials
 
+One `microgit login` is enough: the stored session token is accepted by the
+server as the git password, so `clone`, `commit`, `push` and `pull` work right
+after signing in.
+
 The CLI passes credentials to git as an `http.extraHeader`, so they are **not**
 written into `.git/config` and are not part of the clone URL.
+
+Credentials are looked up in this order:
+
+1. Credentials inside the URL: `--url http://user:pass@host:3000`
+2. A password typed at a prompt during this run (memory only)
+3. A password stored in the config (`microgit config set password ...`), or `MICROGIT_PASSWORD`
+4. The session token stored by `login`
+
+### Credentials inside the URL
+
+Manual (one-shot) runs may carry the credentials in the URL. They are used for
+the API as well as for git, and they are never written to the config file:
+
+```bash
+microgit login --url http://alice:secret@127.0.0.1:3000
+microgit clone secret/app --url http://alice:secret@127.0.0.1:3000
+microgit commit -m "Fix login" --url http://alice:secret@127.0.0.1:3000
+microgit push --url http://alice:secret@127.0.0.1:3000
+```
+
+### When nothing is stored
+
+If no credential is available, or the server rejects the ones that are, the CLI
+asks for the password on a terminal. The username comes from the config and the
+answer is kept **in memory only** — never written to disk — for as long as the
+process runs, so it is asked once per run and dropped by `microgit logout`.
+Without a terminal the command fails with a clear message instead of hanging.
 
 The server's message of the day, when it publishes one, is printed after
 `login`, `register` and `whoami`.

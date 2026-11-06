@@ -5,11 +5,9 @@ const RULE = '━━━';
 export const MARK = cyan(SETTINGS.mark);
 const NAME = `${bold(SETTINGS.name)} ${faint('•')} ${cyan(SETTINGS.label)}`;
 const VERSION = `v${SETTINGS.version}`;
-/** One line, for `--version` and the shell's `version` builtin. */
 export function logoTiny() {
     return `${MARK}${faint('──')}${cyan(NODE)}  ${NAME} ${faint('·')} ${dim(VERSION)}`;
 }
-/** Three lines, for the interactive shell banner. */
 export function logoCompact() {
     const stem = ' '.repeat(SETTINGS.mark.length + 3);
     return [
@@ -18,7 +16,6 @@ export function logoCompact() {
         `${stem}${faint(`┗${RULE}`)} ${cyan(NODE)}   ${dim(SETTINGS.tagline)}`,
     ].join('\n');
 }
-/** Boxed mark, for `help`. */
 export function logoBox() {
     const lead = '   ';
     const stem = ' '.repeat(lead.length + SETTINGS.mark.length + 3);

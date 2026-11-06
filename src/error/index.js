@@ -1,4 +1,3 @@
-/** An expected failure: printed without a stack trace and the process exits 1. */
 export class CliError extends Error {
     exitCode;
     constructor(message, exitCode = 1) {
@@ -7,7 +6,6 @@ export class CliError extends Error {
         this.exitCode = exitCode;
     }
 }
-/** Readable text for anything thrown, used by the CLI and the shell. */
 export function errorMessage(error) {
     return error instanceof Error ? error.message : String(error);
 }

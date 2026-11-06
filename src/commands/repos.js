@@ -1,11 +1,10 @@
 import { parseArgs } from 'node:util';
-import { ApiClient } from '../api/index.js';
+import { apiClientFor } from '../api/index.js';
 import { loadConfig, requireAuth } from '../config/index.js';
 import { cloneRepo, initRepo } from '../git/index.js';
 import { BIN } from '../config/settings.js';
 import { ask, confirm, cyan, dim, fail, faint, info, ok, printJson, table } from '../ui/index.js';
 import { parseTarget, positiveInt, text, trimmed } from '../util/index.js';
-/** Ask public/private when the flag is not given; Enter means public. */
 async function askVisibility() {
     const answer = (await ask(`Visibility ${dim('[public/private]')} ${faint('(public)')}: `))
         .toLowerCase()
@@ -53,7 +52,11 @@ Options:
         fail('Use either --private or --public, not both.');
     const visibility = values.private ? true : values.public ? false : null;
     const config = loadConfig(text(values.url));
-    const api = new ApiClient(config.url, config.token);
+    const api = await apiClientFor({
+        url: config.url,
+        token: config.token,
+        credentials: config.urlCredentials,
+    });
     const result = await api.listRepos({
         owner: trimmed(values.owner),
         name: trimmed(values.name),
@@ -136,7 +139,11 @@ Examples:
         isPrivate = await askVisibility();
     const config = loadConfig(text(values.url));
     requireAuth(config);
-    const api = new ApiClient(config.url, config.token);
+    const api = await apiClientFor({
+        url: config.url,
+        token: config.token,
+        credentials: config.urlCredentials,
+    });
     const repo = await api.newRepo(name, isPrivate);
     if (values.json) {
         printJson({ ...repo, url: config.url });
@@ -199,7 +206,11 @@ Options:
             return;
         }
     }
-    const api = new ApiClient(config.url, config.token);
+    const api = await apiClientFor({
+        url: config.url,
+        token: config.token,
+        credentials: config.urlCredentials,
+    });
     const result = await api.deleteRepo(owner, parsed.name);
     if (values.json) {
         printJson(result);
@@ -241,9 +252,12 @@ Examples:
     const parsed = parseTarget(target);
     const config = loadConfig(text(values.url));
     let repo;
-    const api = new ApiClient(config.url, config.token);
+    const api = await apiClientFor({
+        url: config.url,
+        token: config.token,
+        credentials: config.urlCredentials,
+    });
     if (parsed.cloneUrl) {
-        // Use the URL format: http://<ip>/<user>/<repo>.git
         const owner = parsed.owner;
         const name = parsed.name;
         if (!owner)

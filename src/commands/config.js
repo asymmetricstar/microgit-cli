@@ -7,7 +7,6 @@ function mask(value) {
         return 'saved';
     return `${value.slice(0, 4)}...${value.slice(-4)}`;
 }
-/** Open the config file in the user's preferred editor. */
 async function editConfigFile(file) {
     if (!fs.existsSync(file))
         writeStoredConfig(readStoredConfig());
@@ -31,8 +30,6 @@ async function showConfigMenu() {
     console.log('  [6] Clear config');
     console.log('  [7] Exit');
     console.log('');
-    // Ask through the shared prompt so the interactive shell keeps a single
-    // readline on stdin; a second interface would echo every keystroke twice.
     const choice = await ask('Select an option [1-7]: ');
     if (choice === '1') {
         const url = await promptValue('Server URL (e.g. http://127.0.0.1:3000)', stored.url || 'http://127.0.0.1:3000');
@@ -68,7 +65,6 @@ async function showConfigMenu() {
         ok(`Removed ${configFilePath()}`);
     }
     else if (choice === '7') {
-        // Exit
     }
     else {
         console.log('Invalid option. Please select 1-7.');

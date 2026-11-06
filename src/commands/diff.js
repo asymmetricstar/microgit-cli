@@ -2,7 +2,6 @@ import { requireGitRepo, git } from '../git/index.js';
 import { BIN } from '../config/settings.js';
 import { fail, info } from '../ui/index.js';
 import { green, red } from '../theme/palette.js';
-/** `diff`: show the working-tree (or staged) changes in the current repo. */
 export async function diffCommand(argv) {
     const quiet = argv.includes('--quiet') || argv.includes('-q');
     const stat = argv.includes('--stat') || argv.includes('-s');

@@ -3,7 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { CliError } from '../error/index.js';
 import { BIN, SETTINGS } from './settings.js';
-/** Environment variables, named from the settings prefix. */
 export const ENV = {
     url: `${SETTINGS.envPrefix}_URL`,
     token: `${SETTINGS.envPrefix}_TOKEN`,
@@ -12,7 +11,6 @@ export const ENV = {
     config: `${SETTINGS.envPrefix}_CONFIG`,
 };
 export const DEFAULT_URL = 'http://127.0.0.1:3000';
-/** `MICROGIT_CONFIG` (or the settings prefix) can point at a different file. */
 export function configFilePath() {
     const override = process.env[ENV.config]?.trim();
     return override
@@ -69,12 +67,10 @@ export function writeStoredConfig(config) {
         encoding: 'utf8',
         mode: 0o600,
     });
-    // Windows ignores the mode; everywhere else keep the file private.
     try {
         fs.chmodSync(file, 0o600);
     }
     catch {
-        // Best effort only.
     }
 }
 export function clearStoredConfig() {
@@ -85,40 +81,104 @@ export function clearStoredConfig() {
         throw new CliError(`Cannot remove the config file: ${error.message}`);
     }
 }
-/** Accept `host`, `host:3000`, `https://host`; strip trailing slashes. */
 export function normalizeUrl(raw) {
     const trimmed = raw.trim().replace(/\/+$/, '');
     if (trimmed === '')
         return DEFAULT_URL;
     return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
 }
-/** `--url` first, then the URL env var, then the stored value, then localhost. */
+export function splitCredentials(raw) {
+    const url = normalizeUrl(raw);
+    const schemeEnd = url.indexOf('://');
+    if (schemeEnd === -1)
+        return { url };
+    const authorityStart = schemeEnd + 3;
+    const rest = url.slice(authorityStart);
+    const authorityEnd = rest.search(/[/?#]/);
+    const authority = authorityEnd === -1 ? rest : rest.slice(0, authorityEnd);
+    const suffix = authorityEnd === -1 ? '' : rest.slice(authorityEnd);
+    const at = authority.lastIndexOf('@');
+    if (at === -1)
+        return { url };
+    const userinfo = authority.slice(0, at);
+    const host = authority.slice(at + 1);
+    if (userinfo === '' || host === '')
+        return { url };
+    const decode = (value) => {
+        try {
+            return decodeURIComponent(value);
+        }
+        catch {
+            return value;
+        }
+    };
+    const colon = userinfo.indexOf(':');
+    const username = decode(colon === -1 ? userinfo : userinfo.slice(0, colon));
+    const password = colon === -1 ? '' : decode(userinfo.slice(colon + 1));
+    const result = { url: `${url.slice(0, authorityStart)}${host}${suffix}` };
+    if (username !== '')
+        result.username = username;
+    if (password !== '')
+        result.password = password;
+    return result;
+}
 export function resolveUrl(flagUrl) {
     const stored = readStoredConfig();
-    return normalizeUrl(flagUrl?.trim() || process.env[ENV.url]?.trim() || stored.url || DEFAULT_URL);
+    return splitCredentials(normalizeUrl(flagUrl?.trim() || process.env[ENV.url]?.trim() || stored.url || DEFAULT_URL)).url;
 }
-/** Everything a command needs: URL, token and optional git credentials. */
 export function loadConfig(flagUrl) {
     const stored = readStoredConfig();
+    const fromUrl = splitCredentials(normalizeUrl(flagUrl?.trim() || process.env[ENV.url]?.trim() || stored.url || DEFAULT_URL));
     return {
         ...stored,
-        url: resolveUrl(flagUrl),
+        url: fromUrl.url,
+        urlCredentials: fromUrl.username !== undefined || fromUrl.password !== undefined
+            ? { username: fromUrl.username, password: fromUrl.password }
+            : undefined,
         token: process.env[ENV.token]?.trim() || stored.token,
-        username: process.env[ENV.username]?.trim() || stored.username,
-        password: process.env[ENV.password] || stored.password,
+        username: fromUrl.username || process.env[ENV.username]?.trim() || stored.username,
+        password: fromUrl.password || process.env[ENV.password] || stored.password,
         configPath: configFilePath(),
     };
 }
 export function requireAuth(config) {
-    if (!config.token) {
-        throw new CliError(`You are not signed in. Run \`${BIN} login\` first.`);
-    }
+    if (config.token)
+        return;
+    if (config.urlCredentials?.username && config.urlCredentials.password)
+        return;
+    throw new CliError(`You are not signed in. Run \`${BIN} login\` first.`);
 }
-/** Basic credentials for git, or `null` when only the API session is stored. */
+export function sessionValid(config) {
+    if (!config.token)
+        return false;
+    if (config.expiresAt === undefined)
+        return true;
+    const expires = Date.parse(config.expiresAt);
+    return Number.isNaN(expires) || expires > Date.now();
+}
+let runtimePassword;
+export function rememberPassword(url, username, password) {
+    if (password === '')
+        return;
+    runtimePassword = { url, username, password };
+}
+export function forgetPassword() {
+    runtimePassword = undefined;
+}
+function runtimeCredentialFor(config) {
+    if (!runtimePassword || runtimePassword.url !== config.url)
+        return undefined;
+    return runtimePassword;
+}
 export function gitAuth(config) {
-    if (config.username && config.password) {
-        return { username: config.username, password: config.password };
-    }
-    return null;
+    const typed = runtimeCredentialFor(config);
+    const username = config.urlCredentials?.username ?? config.username ?? typed?.username;
+    if (!username)
+        return null;
+    const password = config.urlCredentials?.password ??
+        typed?.password ??
+        config.password ??
+        (sessionValid(config) ? config.token : undefined);
+    return password ? { username, password } : null;
 }
 //# sourceMappingURL=index.js.map

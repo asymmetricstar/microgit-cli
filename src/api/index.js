@@ -1,6 +1,5 @@
 import { CliError } from '../error/index.js';
 import { BIN } from '../config/settings.js';
-/** A non-2xx response from the server. */
 export class ApiError extends Error {
     status;
     constructor(status, message) {
@@ -9,7 +8,6 @@ export class ApiError extends Error {
         this.status = status;
     }
 }
-/** Minimal typed client for the JSON API; the token goes in a Bearer header. */
 export class ApiClient {
     baseUrl;
     token;
@@ -31,7 +29,6 @@ export class ApiClient {
             headers['Content-Type'] = 'application/json';
         let response;
         try {
-            // Use a signal that ensures the fetch does not hang indefinitely
             const abortController = new AbortController();
             const timeoutId = setTimeout(() => {
                 abortController.abort('Network timeout or server unreachable');
@@ -46,16 +43,12 @@ export class ApiClient {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            // Check if it's a network/reachability issue
             if (message.includes('Cannot reach') || message.includes('fetch failed') || message.includes('Failed to fetch') || message.includes('NetworkError') || message.includes('ECONNREFUSED') || message.includes('ENOTFOUND') || message.includes('timeout')) {
                 throw new CliError(`Cannot reach ${this.baseUrl}. Please check your connection or server status.`);
             }
             throw new CliError(`Cannot reach ${this.baseUrl}: ${message}`);
         }
         const text = await response.text();
-        // A non-JSON content-type (e.g. text/html error page) is not a JSON body.
-        // An empty/missing header is tolerated so old servers without headers still
-        // work; only an explicit non-JSON type is rejected.
         const contentType = response.headers?.get?.('content-type') || '';
         const ct = contentType.trim().toLowerCase();
         const isNotJson = ct.length > 0 && !ct.includes('json');
@@ -123,5 +116,15 @@ export class ApiClient {
     deleteRepo(owner, name) {
         return this.request('DELETE', this.repoPath(owner, name));
     }
+}
+export async function apiClientFor(options) {
+    if (options.token)
+        return new ApiClient(options.url, options.token);
+    const { username, password } = options.credentials ?? {};
+    if (username && password) {
+        const session = await new ApiClient(options.url).login(username, password);
+        return new ApiClient(options.url, session.token);
+    }
+    return new ApiClient(options.url);
 }
 //# sourceMappingURL=index.js.map

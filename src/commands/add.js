@@ -1,9 +1,3 @@
-/**
- * `add`: stage files for a future commit.
- *   - No arguments → stage every untracked file in the repo (`git add .`).
- *   - Arguments    → stage only the given paths, comma-separated
- *     (`git add <file1>,<file2>,<file3>...`).
- */
 import { gitChecked, requireGitRepo } from '../git/index.js';
 import { info } from '../ui/index.js';
 export async function addCommand(argv) {

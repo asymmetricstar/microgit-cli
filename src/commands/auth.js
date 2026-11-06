@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
-import { ApiClient, ApiError } from '../api/index.js';
-import { ENV, loadConfig, normalizeUrl, readStoredConfig, resolveUrl, writeStoredConfig, } from '../config/index.js';
+import { ApiClient, ApiError, apiClientFor } from '../api/index.js';
+import { DEFAULT_URL, ENV, forgetPassword, loadConfig, normalizeUrl, readStoredConfig, requireAuth, resolveUrl, splitCredentials, writeStoredConfig, } from '../config/index.js';
 import { BIN } from '../config/settings.js';
 import { ask, askSecret, bold, cyan, dim, fail, faint, formatDate, info, ok, printJson, warn } from '../ui/index.js';
 const LOGIN_OPTIONS = {
@@ -33,7 +33,6 @@ Options:
   -u, --username     Account name (also ${ENV.username})
      --user           Alias for --username
   -p, --password     Password (also ${ENV.password})
-  --save-password    Also store the password for git push/pull/clone
   --forget-password  Remove any password saved by an earlier login
   --force            Sign in again even when a session is stored
   --json             Print the result as JSON
@@ -41,7 +40,7 @@ Options:
 
 Examples:
   ${BIN} login
-  ${BIN} login alice --url http://{HOST_NAME}:{PORT} --save-password`);
+  ${BIN} login alice --url http://{HOST_NAME}:{PORT}`);
 }
 function printRegisterHelp() {
     console.log(`Usage: ${BIN} register [username] [options]
@@ -53,12 +52,10 @@ Options:
   -u, --username     Account name (also ${ENV.username})
      --user           Alias for --username
   -p, --password     Password (also ${ENV.password})
-  --save-password    Also store the password for git push/pull/clone
   --forget-password  Remove any password saved by an earlier login
   --json             Print the result as JSON
   -h, --help         Show this help`);
 }
-/** Save the session fields, optionally the git password, and keep the URL. */
 function saveSession(url, username, token, expiresAt, password, forgetPassword) {
     const stored = readStoredConfig();
     const next = {
@@ -78,7 +75,6 @@ function saveSession(url, username, token, expiresAt, password, forgetPassword) 
         delete next.password;
     writeStoredConfig(next);
 }
-/** The server's message of the day, when it publishes one. */
 function showMotd(motd) {
     const message = motd?.trim();
     if (!message)
@@ -89,15 +85,10 @@ function showMotd(motd) {
         console.log(`  ${line}`);
     console.log('');
 }
-/**
- * Reuse the stored session when it is still valid. Returns true when the caller
- * should stop: the user is already signed in.
- */
 async function reuseSession(flagUrl, stored, json) {
     if (!stored.token)
         return false;
     const url = resolveUrl(flagUrl);
-    // A token belongs to the server it was issued by.
     if (stored.url !== undefined && normalizeUrl(stored.url) !== url)
         return false;
     const expiresAt = stored.expiresAt;
@@ -135,25 +126,35 @@ export async function loginCommand(argv) {
     if (values.help)
         return printLoginHelp();
     const stored = readStoredConfig();
-    const url = resolveUrl(text(values.url));
-    const flagUser = trimmed(values.username) ?? trimmed(values.user) ?? trimmed(positionals[0]);
+    const positional = trimmed(positionals[0]);
+    const positionalIsUrl = positional !== undefined && /^[a-z][a-z0-9+.-]*:\/\//i.test(positional);
+    const urlCreds = splitCredentials(normalizeUrl(text(values.url) ||
+        (positionalIsUrl ? positional : undefined) ||
+        process.env[ENV.url] ||
+        stored.url ||
+        DEFAULT_URL));
+    const url = urlCreds.url;
+    const flagUser = trimmed(values.username) ?? trimmed(values.user) ?? (positionalIsUrl ? undefined : positional);
     const envUser = trimmed(process.env[ENV.username]);
     const flagPassword = text(values.password) ?? process.env[ENV.password];
-    // 1. A valid stored session wins: do not ask for the username again.
-    if (!values.force && flagUser === undefined && envUser === undefined && flagPassword === undefined) {
+    if (!values.force &&
+        flagUser === undefined &&
+        envUser === undefined &&
+        flagPassword === undefined &&
+        urlCreds.username === undefined &&
+        urlCreds.password === undefined) {
         if (await reuseSession(text(values.url), stored, Boolean(values.json)))
             return;
     }
-    let username = flagUser ?? envUser;
-    let password = flagPassword;
-    // Prompt only if not in terminal command mode (no --url flag or positional url)
+    let username = flagUser ?? urlCreds.username ?? envUser;
+    let password = text(values.password) ?? urlCreds.password ?? process.env[ENV.password];
     const hasUrlArg = argv.includes('--url') || argv.some(a => a.startsWith('http://') || a.startsWith('https://'));
     if (!username) {
         if (!hasUrlArg) {
             username = await ask('Username: ');
         }
         else {
-            fail('Username is required. Use the --user or --username flag.');
+            fail('Username is required. Use --user/--username, or embed it in the URL (http://user@host).');
         }
     }
     if (!password) {
@@ -161,7 +162,7 @@ export async function loginCommand(argv) {
             password = await askSecret('Password: ');
         }
         else if (hasUrlArg) {
-            fail('Password is required. Use the --password flag.');
+            fail('Password is required. Use --password, or embed it in the URL (http://user:pass@host).');
         }
     }
     if (!username)
@@ -196,20 +197,27 @@ export async function registerCommand(argv) {
     if (values.help)
         return printRegisterHelp();
     const stored = readStoredConfig();
-    const url = resolveUrl(text(values.url));
+    const positional = trimmed(positionals[0]);
+    const positionalIsUrl = positional !== undefined && /^[a-z][a-z0-9+.-]*:\/\//i.test(positional);
+    const urlCreds = splitCredentials(normalizeUrl(text(values.url) ||
+        (positionalIsUrl ? positional : undefined) ||
+        process.env[ENV.url] ||
+        stored.url ||
+        DEFAULT_URL));
+    const url = urlCreds.url;
     let username = trimmed(values.username) ??
         trimmed(values.user) ??
-        trimmed(positionals[0]) ??
+        (positionalIsUrl ? undefined : positional) ??
+        urlCreds.username ??
         trimmed(process.env[ENV.username]);
-    let password = text(values.password) ?? process.env[ENV.password];
-    // Prompt only if not in terminal command mode (no --url flag or positional url)
+    let password = text(values.password) ?? urlCreds.password ?? process.env[ENV.password];
     const hasUrlArg = argv.includes('--url') || argv.some(a => a.startsWith('http://') || a.startsWith('https://'));
     if (!username) {
         if (!hasUrlArg) {
             username = await ask('Username: ');
         }
         else {
-            fail('Username is required. Use the --user or --username flag.');
+            fail('Username is required. Use --user/--username, or embed it in the URL (http://user@host).');
         }
     }
     if (!password) {
@@ -217,7 +225,7 @@ export async function registerCommand(argv) {
             password = await askSecret('Password: ');
         }
         else if (hasUrlArg) {
-            fail('Password is required. Use the --password flag.');
+            fail('Password is required. Use --password, or embed it in the URL (http://user:pass@host).');
         }
     }
     if (!username)
@@ -266,7 +274,6 @@ export async function logoutCommand(argv) {
         }
         catch (error) {
             if (error instanceof ApiError && error.status === 401) {
-                // The session was already gone; clearing the local file is still right.
             }
             else {
                 warn(`Could not revoke the server session: ${error.message}`);
@@ -277,6 +284,7 @@ export async function logoutCommand(argv) {
     writeStoredConfig({
         url: stored.url ?? config.url,
     });
+    forgetPassword();
     if (values.json) {
         printJson({ loggedOut: revoked, url: config.url });
         return;
@@ -301,10 +309,13 @@ export async function whoamiCommand(argv) {
         return;
     }
     const config = loadConfig(text(values.url));
-    if (!config.token) {
-        fail(`You are not signed in. Run \`${BIN} login\` first.`);
-    }
-    const user = await new ApiClient(config.url, config.token).me();
+    requireAuth(config);
+    const api = await apiClientFor({
+        url: config.url,
+        token: config.token,
+        credentials: config.urlCredentials,
+    });
+    const user = await api.me();
     if (values.json) {
         printJson({
             url: config.url,

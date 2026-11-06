@@ -3,11 +3,9 @@ import { COMMANDS, GROUPS } from '../commands/registry.js';
 import { BIN, SETTINGS } from '../config/settings.js';
 import { logoTiny, logoBox } from '../theme/index.js';
 import { bold, cyan, dim, faint } from '../ui/index.js';
-/** `--version`: one line, no banner, safe for scripts. */
 export function printVersion() {
     console.log(logoTiny());
 }
-/** `help`: boxed mark, commands by group, then options and examples. */
 export function printHelp() {
     const nameWidth = Math.max(...COMMANDS.map((command) => command.name.length));
     const aliasLabels = COMMANDS.map((command) => command.aliases?.length ? `(${command.aliases.join(', ')})` : '');

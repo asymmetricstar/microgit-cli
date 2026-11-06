@@ -6,7 +6,6 @@ export function trimmed(value) {
     const valueText = text(value)?.trim();
     return valueText === '' ? undefined : valueText;
 }
-/** Parse a positive integer option, or fail with a useful message. */
 export function positiveInt(value, option, fallback) {
     const raw = trimmed(value);
     if (raw === undefined)
@@ -17,10 +16,8 @@ export function positiveInt(value, option, fallback) {
     }
     return parsed;
 }
-/** `name`, `name.git`, `owner/name`, `owner/name.git` or `http://<ip>/<user>/<repo>.git` all work. */
 export function parseTarget(raw) {
     const trimmedRaw = raw.trim();
-    // Check if it's a URL format: http://<ip>/<user>/<repo>.git or https://<ip>/<user>/<repo>.git
     const urlMatch = trimmedRaw.match(/^(https?:\/\/[^/]+)\/(.+)\.git$/i);
     if (urlMatch) {
         const baseUrl = urlMatch[1];

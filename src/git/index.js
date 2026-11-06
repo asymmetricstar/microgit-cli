@@ -1,16 +1,10 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ENV, gitAuth } from '../config/index.js';
+import { ENV, gitAuth, rememberPassword } from '../config/index.js';
 import { CliError } from '../error/index.js';
 import { BIN } from '../config/settings.js';
-import { info } from '../ui/index.js';
-/**
- * Git talks HTTP Basic, not the API's Bearer token. Pass the credentials as an
- * `http.extraHeader` through the environment: unlike a URL or a remote entry it
- * is not written to `.git/config`, and unlike `-c` it is not in the process
- * arguments on most systems.
- */
+import { ask, askSecret, info } from '../ui/index.js';
 function gitEnv(auth) {
     const env = { ...process.env };
     delete env.GIT_CONFIG_COUNT;
@@ -26,7 +20,6 @@ function gitEnv(auth) {
     }
     return env;
 }
-/** Run git, optionally with Basic auth and with inherited stdout/stderr. */
 export function git(args, options = {}) {
     const cwd = options.cwd ?? process.cwd();
     const inherit = options.inherit ?? false;
@@ -42,9 +35,13 @@ export function git(args, options = {}) {
         if (!inherit) {
             child.stdout?.on('data', (chunk) => {
                 stdout += chunk.toString('utf8');
+                if (options.forward)
+                    process.stdout.write(chunk);
             });
             child.stderr?.on('data', (chunk) => {
                 stderr += chunk.toString('utf8');
+                if (options.forward)
+                    process.stderr.write(chunk);
             });
         }
         child.on('error', (error) => {
@@ -55,29 +52,42 @@ export function git(args, options = {}) {
         });
     });
 }
-/** Run a git command and fail the CLI if it exits non-zero. */
+function isAuthRejection(result) {
+    const output = `${result.stdout} ${result.stderr}`.toLowerCase();
+    return (output.includes('401') ||
+        output.includes('403') ||
+        output.includes('authentication failed') ||
+        output.includes('access denied') ||
+        output.includes('invalid username or password') ||
+        output.includes('could not read username') ||
+        output.includes('could not read password') ||
+        output.includes('remote: invalid') ||
+        output.includes('terminal prompts disabled'));
+}
+function failureMessage(args, result) {
+    let message = `git ${args.join(' ')} failed with exit code ${result.code}.`;
+    const output = `${result.stdout} ${result.stderr}`.toLowerCase();
+    const isAuthError = output.includes('401') ||
+        output.includes('authentication failed') ||
+        output.includes('access denied') ||
+        output.includes('invalid username or password') ||
+        output.includes('could not read username') ||
+        output.includes('remote: invalid') ||
+        output.includes('http:');
+    if (isAuthError && args[0] === 'push') {
+        message +=
+            ' Authentication failed (possible 401). ' +
+                `Run \`${BIN} login\`, pass credentials in the URL (\`${BIN} push --url http://user:pass@host:port\`), or set ${ENV.password}.`;
+    }
+    return message;
+}
 export async function gitChecked(args, options = {}) {
     const inherit = options.inherit ?? true;
     const result = await git(args, { ...options, inherit });
     if (result.code !== 0) {
-        let message = `git ${args.join(' ')} failed with exit code ${result.code}.`;
-        const output = (result.stdout + ' ' + result.stderr).toLowerCase();
-        const isAuthError = output.includes('401') ||
-            output.includes('authentication failed') ||
-            output.includes('access denied') ||
-            output.includes('invalid username or password') ||
-            output.includes('could not read username') ||
-            output.includes('remote: invalid') ||
-            output.includes('http:');
-        if (isAuthError && args[0] === 'push') {
-            message +=
-                ' Kimlik doğrulama hatası (olası 401). ' +
-                    `Run \`${BIN} login --save-password\` veya ${ENV.password} ortam değişkenini ayarlayın.`;
-        }
-        throw new CliError(message);
+        throw new CliError(failureMessage(args, result));
     }
 }
-/** Run a git command and return its trimmed stdout. */
 export async function gitCapture(args, cwd = process.cwd()) {
     const result = await git(args, { cwd });
     if (result.code !== 0) {
@@ -102,7 +112,6 @@ async function hasUpstream(cwd = process.cwd()) {
     const result = await git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], { cwd });
     return result.code === 0;
 }
-/** Give a new repository a local identity when git has none configured. */
 export async function ensureIdentity(cwd, username) {
     const name = await git(['config', '--get', 'user.name'], { cwd });
     const email = await git(['config', '--get', 'user.email'], { cwd });
@@ -115,7 +124,41 @@ export async function ensureIdentity(cwd, username) {
         info(`Set local git user.email to ${username}@${BIN}.local`);
     }
 }
-/** Clone a repository, using saved credentials when there are any. */
+export async function promptPassword(config, question = 'Password: ') {
+    if (!process.stdin.isTTY)
+        return null;
+    let username = config.username ?? config.urlCredentials?.username;
+    if (!username) {
+        username = (await ask('Username: ')).trim();
+        if (username === '')
+            return null;
+    }
+    const password = await askSecret(question);
+    if (password === '')
+        return null;
+    rememberPassword(config.url, username, password);
+    return { username, password };
+}
+async function runWithCredentials(args, config, cwd, options = {}) {
+    let auth = gitAuth(config);
+    if (!auth && !options.optionalAuth) {
+        auth = await promptPassword(config, 'Password (needed for git): ');
+        if (!auth) {
+            throw new CliError(`No git credentials (username/password). Run \`${BIN} login\` to sign in, ` +
+                `pass them in the URL (\`${BIN} push --url http://user:pass@host:port\`), ` +
+                `or set ${ENV.password}.`);
+        }
+    }
+    const run = (credentials) => git(args, { cwd, auth: credentials, forward: true });
+    let result = await run(auth);
+    if (result.code !== 0 && isAuthRejection(result)) {
+        const prompted = await promptPassword(config, 'Credentials rejected. Password: ');
+        if (prompted)
+            result = await run(prompted);
+    }
+    if (result.code !== 0)
+        throw new CliError(failureMessage(args, result));
+}
 export async function cloneRepo(repo, dir, config) {
     const target = path.resolve(dir);
     if (fs.existsSync(target)) {
@@ -130,14 +173,14 @@ export async function cloneRepo(repo, dir, config) {
             throw new CliError(`Directory is not empty: ${target}`);
         }
     }
-    const auth = gitAuth(config);
-    if (repo.private && !auth && !process.stdin.isTTY) {
-        throw new CliError('This repository is private and no password is saved. ' +
-            `Run \`${BIN} login --save-password\` or set ${ENV.password}.`);
+    if (repo.private && !gitAuth(config) && !process.stdin.isTTY) {
+        throw new CliError('This repository is private and you have no credentials: not signed in. ' +
+            `Run \`${BIN} login\`, pass credentials in the URL, or set ${ENV.password}.`);
     }
-    await gitChecked(['clone', repo.cloneUrl, dir], { auth });
+    await runWithCredentials(['clone', repo.cloneUrl, dir], config, process.cwd(), {
+        optionalAuth: !repo.private,
+    });
 }
-/** Create a local repository with a first commit and push it to the server. */
 export async function initRepo(repo, dir, config) {
     const target = path.resolve(dir);
     if (fs.existsSync(target)) {
@@ -162,30 +205,23 @@ export async function initRepo(repo, dir, config) {
     await gitChecked(['remote', 'add', 'origin', repo.cloneUrl], { cwd: target, inherit: false });
     await pushRepo(config, [], target);
 }
-/** Push the current branch, setting an upstream on the first push. */
 export async function pushRepo(config, extra = [], cwd = process.cwd()) {
     await requireGitRepo(cwd);
     if (!(await hasRemote('origin', cwd))) {
         throw new CliError(`This repository has no 'origin' remote. Use \`${BIN} clone <owner/name>\` or add one with git.`);
-    }
-    const auth = gitAuth(config);
-    if (!auth) {
-        throw new CliError(`Git push için kimlik bilgisi eksik (username/password). ` +
-            `Run \`${BIN} login --save-password\` veya ${ENV.password} ortam değişkenini ayarlayın.`);
     }
     const args = extra.length > 0
         ? ['push', ...extra]
         : (await hasUpstream(cwd))
             ? ['push']
             : ['push', '-u', 'origin', 'HEAD'];
-    await gitChecked(args, { cwd, auth });
+    await runWithCredentials(args, config, cwd);
 }
-/** Pull from origin, using saved credentials when there are any. */
 export async function pullRepo(config, extra = [], cwd = process.cwd()) {
     await requireGitRepo(cwd);
     if (!(await hasRemote('origin', cwd))) {
         throw new CliError(`This repository has no 'origin' remote. Use \`${BIN} clone <owner/name>\` or add one with git.`);
     }
-    await gitChecked(['pull', ...extra], { cwd, auth: gitAuth(config) });
+    await runWithCredentials(['pull', ...extra], config, cwd);
 }
 //# sourceMappingURL=index.js.map

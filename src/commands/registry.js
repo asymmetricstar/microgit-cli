@@ -9,10 +9,6 @@ import { mkdirCommand } from './mkdir.js';
 import { lsdirCommand } from './lsdir.js';
 import { rmCommand } from './rm.js';
 import { CliError } from '../error/index.js';
-/**
- * One table drives the entry point, `help` and the shell's tab completion, so a
- * new command only has to be added here.
- */
 export const COMMANDS = [
     {
         name: "change",
@@ -55,7 +51,6 @@ export const COMMANDS = [
             "--url",
             "--username",
             "--password",
-            "--save-password",
             "--forget-password",
             "--json",
             "--help",
@@ -70,7 +65,6 @@ export const COMMANDS = [
             "--url",
             "--username",
             "--password",
-            "--save-password",
             "--forget-password",
             "--json",
             "--help",
@@ -207,21 +201,17 @@ export const COMMANDS = [
     },
 ];
 export const GROUPS = ['Account', 'Repositories', 'Git', 'Config', 'System'];
-/** Commands the interactive shell handles itself. */
 export const SHELL_BUILTINS = ['clear', 'exit', 'help'];
-/** Look a command up by name or alias, case-insensitively. */
 export function findCommand(name) {
     const needle = name.trim().toLowerCase();
     if (needle === '')
         return undefined;
     return COMMANDS.find((command) => command.name === needle || command.aliases?.includes(needle) === true);
 }
-/** Every accepted command word, sorted, for completion. */
 export function commandNames() {
     const names = COMMANDS.flatMap((command) => [command.name, ...(command.aliases ?? [])]);
     return [...new Set(names)].sort();
 }
-/** Run one command line; unknown names fail like the one-shot CLI does. */
 export async function dispatch(argv) {
     const [name, ...rest] = argv;
     const command = name === undefined ? undefined : findCommand(name);

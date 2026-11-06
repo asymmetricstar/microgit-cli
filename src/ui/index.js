@@ -2,19 +2,15 @@ import readline from 'node:readline';
 import { CliError } from '../error/index.js';
 import { faint, dim, bold, red, green, yellow, cyan, visibleWidth, box, accentBlue, accentGreen } from '../theme/palette.js';
 export { faint, dim, bold, red, green, yellow, cyan, visibleWidth, box, accentBlue, accentGreen };
-/** A successful step. */
 export function ok(message) {
     console.log(`${green('✓')} ${message}`);
 }
-/** A neutral next step or piece of information. */
 export function info(message) {
     console.log(`${cyan('→')} ${message}`);
 }
-/** A warning that does not stop the command. */
 export function warn(message) {
     console.error(`${yellow('!')} ${message}`);
 }
-/** Stop the command with a readable error. */
 export function fail(message) {
     throw new CliError(message);
 }
@@ -22,7 +18,6 @@ export function printJson(value) {
     console.log(JSON.stringify(value, null, 2));
 }
 let promptHandlers = null;
-/** Install or remove the prompt handlers used by `ask`/`askSecret`. */
 export function usePromptHandlers(handlers) {
     promptHandlers = handlers;
 }
@@ -32,7 +27,6 @@ function askWith(rl, question) {
         rl.once('close', () => resolve(''));
     });
 }
-/** Read one line from the terminal, trimmed. */
 export async function ask(question) {
     if (promptHandlers)
         return promptHandlers.ask(question);
@@ -43,11 +37,9 @@ export async function ask(question) {
     }
     finally {
         rl.close();
-        // Give the interface time to release stdin before the next prompt.
         await new Promise((resolve) => setImmediate(resolve));
     }
 }
-/** Read a password without echoing it; falls back to a normal line off a TTY. */
 export async function askSecret(question) {
     if (promptHandlers)
         return promptHandlers.askSecret(question);
@@ -63,12 +55,10 @@ export async function askSecret(question) {
         rl.question('', (answer) => {
             process.stdout.write('\n');
             rl.close();
-            // Give the interface time to release stdin before the next prompt.
             setImmediate(() => resolve(answer));
         });
     });
 }
-/** Ask a yes/no question; non-interactive runs use the fallback. */
 export async function confirm(question, fallback = false) {
     if (!process.stdin.isTTY)
         return fallback;
@@ -77,7 +67,6 @@ export async function confirm(question, fallback = false) {
         return fallback;
     return answer === 'y' || answer === 'yes';
 }
-/** A small aligned table with a dashed header underline. */
 export function table(headers, rows) {
     const widths = headers.map((header, index) => Math.max(header.length, ...rows.map((row) => (row[index] ?? '').length)));
     const pad = (cells) => cells.map((cell, index) => cell.padEnd(widths[index] ?? 0));
@@ -91,7 +80,6 @@ export function table(headers, rows) {
         ...rows.map(line),
     ].join('\n');
 }
-/** Short, local representation of an ISO timestamp. */
 export function formatDate(iso) {
     if (!iso)
         return '-';
