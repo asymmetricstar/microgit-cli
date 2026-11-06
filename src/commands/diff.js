@@ -32,11 +32,15 @@ export async function diffCommand(argv) {
         fail(result.stderr.trim() || `git ${args.join(' ')} failed with exit code ${result.code}.`);
     }
     if (stat) {
+        if (result.stdout.trim() === '') {
+            info('No changes.');
+            return;
+        }
         console.log(result.stdout);
         return;
     }
     const lines = result.stdout.split('\n').map((line) => line.replace(/\r$/, ''));
-    if (lines.length === 0) {
+    if (result.stdout.trim() === '' || (lines.length === 1 && lines[0] === '')) {
         info('No changes.');
         return;
     }

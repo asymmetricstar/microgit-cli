@@ -72,12 +72,16 @@ function failureMessage(args, result) {
         output.includes('access denied') ||
         output.includes('invalid username or password') ||
         output.includes('could not read username') ||
-        output.includes('remote: invalid') ||
-        output.includes('http:');
+        output.includes('remote: invalid');
     if (isAuthError && args[0] === 'push') {
         message +=
             ' Authentication failed (possible 401). ' +
                 `Run \`${BIN} login\`, pass credentials in the URL (\`${BIN} push --url http://user:pass@host:port\`), or set ${ENV.password}.`;
+    }
+    const isNotFoundError = output.includes('not found') || output.includes('does not exist');
+    if (isNotFoundError && args[0] === 'push') {
+        message +=
+            ` The remote repository may not exist on the server yet. Create it first with \`${BIN} new <name>\`.`;
     }
     return message;
 }
