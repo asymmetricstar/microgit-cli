@@ -19,7 +19,7 @@ Run `microgit` with no arguments (or `$ microgit shell`) to open the shell:
 
 ```
   μgit ━━━━ ●
-       ┣━━━ ●   microgit-cli • MIT v0.1.15
+       ┣━━━ ●   microgit-cli • MIT v0.0.0
        ┗━━━ ●   manage your own git server — clone, push, host
 
   # server   http://127.0.0.1:3000
@@ -90,6 +90,7 @@ only asked for once. Add `--force` to sign in as another account.
 | `microgit register` | Create an account (when the server allows registration) and sign in |
 | `microgit logout` | Revoke the server session, remove the local token, password and any password typed this run |
 | `microgit whoami` | Show the signed-in account, server and expiry |
+| `microgit access <repo>` | List, grant or revoke access to a repository (`grant`, `revoke`, `--role read\|write\|all`) |
 | `microgit new <name>` | Create a repository; asks public/private, plus `--private`, `--public`, `--clone`, `--init` |
 | `microgit list` | List repositories; `--owner`, `--name`, `--public`, `--private` |
 | `microgit delete <name\|owner/name>` | Delete a repository; asks before doing it |
@@ -103,7 +104,7 @@ only asked for once. Add `--force` to sign in as another account.
 
 Every command accepts `-h` / `--help`. Commands that print API data also accept
 `--json` where it makes sense (`whoami`, `list`, `new`, `delete`, `clone`,
-`login`, `register`, `logout`, `config`).
+`login`, `register`, `logout`, `config`, `access`).
 
 ### Creating repositories
 
@@ -153,6 +154,25 @@ microgit list --owner alice
 microgit list --private --limit 20
 microgit list --public --page 2 --json
 ```
+
+## Managing repository access
+
+Only the owner (or an administrator) can hand access out on a repository. The
+CLI wraps the server's member endpoints:
+
+```bash
+microgit access william/my-private-repo                  # list members
+microgit access grant william/my-private-repo Emma       # grant read (default)
+microgit access grant william/my-private-repo Emma --role write
+microgit access revoke william/my-private-repo Emma
+microgit access william/my-private-repo --json
+```
+
+- `read` opens the repository page and allows cloning and fetching
+- `write` (or `all`) does everything `read` does **and** allows pushing — the
+  roles are cumulative, so granting `write`/`all` never takes read away
+- granting the same account twice updates the role instead of failing
+- the owner and administrators are never listed as members
 
 ## Authentication and git credentials
 

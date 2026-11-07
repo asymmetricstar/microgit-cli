@@ -1,4 +1,5 @@
 import { loginCommand, logoutCommand, registerCommand, whoamiCommand } from './auth.js';
+import { accessCommand } from './access.js';
 import { configCommand } from './config.js';
 import { addCommand } from './add.js';
 import { commitCommand, initCommand, pullCommand, pushCommand, statusCommand } from './git.js';
@@ -85,6 +86,14 @@ export const COMMANDS = [
         summary: "Show the signed-in account",
         flags: ["--url", "--json", "--help"],
         run: whoamiCommand,
+    },
+    {
+        name: "access",
+        aliases: ["members"],
+        group: "Account",
+        summary: "Grant, revoke or list access to a repository",
+        flags: ["--url", "--role", "--json", "--help"],
+        run: accessCommand,
     },
     {
         name: "new",

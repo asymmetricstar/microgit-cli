@@ -116,6 +116,18 @@ export class ApiClient {
     deleteRepo(owner, name) {
         return this.request('DELETE', this.repoPath(owner, name));
     }
+    listMembers(owner, name) {
+        return this.request('GET', `${this.repoPath(owner, name)}/members`);
+    }
+    addMember(owner, name, username, role = 'read') {
+        return this.request('POST', `${this.repoPath(owner, name)}/members`, {
+            username,
+            role,
+        });
+    }
+    removeMember(owner, name, username) {
+        return this.request('DELETE', `${this.repoPath(owner, name)}/members/${encodeURIComponent(username)}`);
+    }
 }
 export async function apiClientFor(options) {
     if (options.token)
